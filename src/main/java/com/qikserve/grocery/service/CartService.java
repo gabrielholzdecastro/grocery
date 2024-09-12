@@ -3,6 +3,7 @@ package com.qikserve.grocery.service;
 import com.qikserve.grocery.model.Cart;
 import com.qikserve.grocery.model.ProductDetail;
 import com.qikserve.grocery.model.Promotion;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 @Service
 public class CartService {
 
+    @Getter
     private final Cart cart = new Cart(new ArrayList<>(), 0, 0, 0);
 
     @Autowired
@@ -45,30 +47,41 @@ public class CartService {
 
         switch (promotion.getType()) {
             case QTY_BASED_PRICE_OVERRIDE:
-                cart.setTotalPrice(cart.getTotalPrice() + productDetail.getPrice());
-                if (count % 2 == 1)
-                    cart.setFinalPrice(cart.getFinalPrice() + productDetail.getPrice());
-                else {
-                    cart.setFinalPrice(cart.getFinalPrice() - productDetail.getPrice());
-                    cart.setFinalPrice(cart.getFinalPrice() + promotion.getPrice());
-                }
+                handleQtyBasedPriceOverride(productDetail, promotion, count);
                 break;
             case BUY_X_GET_Y_FREE:
-                cart.setTotalPrice(cart.getTotalPrice() + productDetail.getPrice());
-                cart.setFinalPrice(cart.getFinalPrice() + productDetail.getPrice());
-
-                if (count % 3 == 0) {
-                    cart.setFinalPrice(cart.getFinalPrice() - productDetail.getPrice());
-                }
-
+                handleBuyXGetYFree(productDetail, promotion, count);
                 break;
             case FLAT_PERCENT:
-//                cart.setTotalPrice(cart.getTotalPrice() + productDetail.getPrice());
-//                cart.setFinalPrice((int) (cart.getFinalPrice() + (productDetail.getPrice() * 0.10)));
+                handleFlatPercent(productDetail, promotion);
                 break;
         }
 
         cart.setDiscount(cart.getTotalPrice() - cart.getFinalPrice());
+    }
+
+    private void handleQtyBasedPriceOverride(ProductDetail productDetail, Promotion promotion, long count) {
+        cart.setTotalPrice(cart.getTotalPrice() + productDetail.getPrice());
+        if (count % promotion.getRequiredQty() == 0) {
+            cart.setFinalPrice(cart.getFinalPrice() - productDetail.getPrice());
+            cart.setFinalPrice(cart.getFinalPrice() + promotion.getPrice());
+        } else {
+            cart.setFinalPrice(cart.getFinalPrice() + productDetail.getPrice());
+        }
+    }
+
+    private void handleBuyXGetYFree(ProductDetail productDetail, Promotion promotion, long count) {
+        cart.setTotalPrice(cart.getTotalPrice() + productDetail.getPrice());
+        cart.setFinalPrice(cart.getFinalPrice() + productDetail.getPrice());
+        if (count % (promotion.getRequiredQty() + promotion.getFreeQty()) == 0) {
+            cart.setFinalPrice(cart.getFinalPrice() - productDetail.getPrice());
+        }
+    }
+
+    private void handleFlatPercent(ProductDetail productDetail, Promotion promotion) {
+        int discountAmount = (int) (productDetail.getPrice() * (promotion.getAmount() / 100.0));
+        cart.setTotalPrice(cart.getTotalPrice() + productDetail.getPrice());
+        cart.setFinalPrice(cart.getFinalPrice() + (productDetail.getPrice() - discountAmount));
     }
 
 }
