@@ -10,11 +10,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 import java.util.Arrays;
+
+import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class ProductServiceTest {
 
@@ -30,39 +31,37 @@ class ProductServiceTest {
     }
 
     @Test
-    void testGetAllProducts() {
-        // Mock da resposta do Feign Client
+    void shouldReturnAllProducts() {
         List<Product> mockProducts = Arrays.asList(
                 new Product("1", "Product 1", 1000),
                 new Product("2", "Product 2", 2000)
         );
         when(productClient.getAll()).thenReturn(mockProducts);
 
-        // Chama o método
         List<Product> products = productService.getAll();
 
-        // Verifica se o resultado está correto
-        assertNotNull(products);
-        assertEquals(2, products.size());
-        assertEquals("Product 1", products.getFirst().getName());
+        assertThat(products).hasSize(2);
+        assertThat(products.get(0).getName()).isEqualTo("Product 1");
+        assertThat(products.get(1).getPrice()).isEqualTo(2000);
+
+        verify(productClient, times(1)).getAll();
     }
 
     @Test
-    void testGetProductById() {
-        // Mock de um produto detalhado com promoção
+    void shouldReturnProductById() {
         Promotion mockPromotion = new Promotion("promo1", PromotionType.FLAT_PERCENT, 0, 0, 0, 10);
         ProductDetail mockProductDetail = new ProductDetail("1", "Product 1", 1000, List.of(mockPromotion));
 
         when(productClient.getProductDetail("1")).thenReturn(mockProductDetail);
 
-        // Chama o método
         ProductDetail productDetail = productService.getById("1");
 
-        // Verifica se o resultado está correto
-        assertNotNull(productDetail);
-        assertEquals("Product 1", productDetail.getName());
-        assertEquals(1000, productDetail.getPrice());
-        assertEquals(1, productDetail.getPromotions().size());
-        assertEquals(PromotionType.FLAT_PERCENT, productDetail.getPromotions().getFirst().getType());
+        assertThat(productDetail).isNotNull();
+        assertThat(productDetail.getName()).isEqualTo("Product 1");
+        assertThat(productDetail.getPrice()).isEqualTo(1000);
+        assertThat(productDetail.getPromotions()).hasSize(1);
+        assertThat(productDetail.getPromotions().getFirst().getType()).isEqualTo(PromotionType.FLAT_PERCENT);
+
+        verify(productClient, times(1)).getProductDetail("1");
     }
 }
